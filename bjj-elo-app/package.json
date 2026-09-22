@@ -1,0 +1,14 @@
+{
+  "name": "mat-rank",
+  "version": "1.0.0",
+  "description": "BJJ Elo ranking app with mutual match confirmation, gyms, and a match feed",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}
