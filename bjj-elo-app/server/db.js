@@ -4,7 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const { DatabaseSync } = require("node:sqlite");
 
-const dataDir = path.join(__dirname, "..", "data");
+const dataDir = "/data";
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
 const dbPath = path.join(dataDir, "matrank.db");
