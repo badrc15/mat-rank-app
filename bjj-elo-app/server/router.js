@@ -46,7 +46,7 @@ class Router {
         await route.handler(req, res, { params, query, body });
       } catch (err) {
         console.error(err);
-        if (!res.headersSent) sendJson(res, 500, { error: "Server error" });
+        if (!res.headersSent) sendJson(res, err.status || 500, { error: err.status === 503 ? "Please try again shortly." : "Server error" });
       }
       return true;
     }
@@ -55,21 +55,28 @@ class Router {
 }
 
 function parseBody(req) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     let data = "";
+    let bytes = 0;
+    let oversized = false;
     req.on("data", (chunk) => {
+      bytes += chunk.length;
+      if (bytes > 16384) { oversized = true; reject(Object.assign(new Error("Request too large"), { status: 413 })); return; }
       data += chunk;
-      if (data.length > 1e6) req.destroy();
     });
     req.on("end", () => {
+      if (oversized) return;
       if (!data) return resolve({});
       try {
-        resolve(JSON.parse(data));
+        const value = JSON.parse(data);
+        if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Expected object");
+        resolve(value);
       } catch {
-        resolve({});
+        reject(Object.assign(new Error("Invalid JSON"), { status: 400 }));
       }
     });
-    req.on("error", () => resolve({}));
+    req.on("error", reject);
+    req.on("aborted", () => reject(new Error("Request aborted")));
   });
 }
 

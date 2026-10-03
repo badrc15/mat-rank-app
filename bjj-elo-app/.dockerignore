@@ -4,3 +4,12 @@
 **/*.log
 **/.DS_Store
 fly.toml
+**/.env*
+**/backups
+**/.test-data
+**/test
+**/.git
+**/.projects
+**/.claude
+**/.agents
+**/.cursor

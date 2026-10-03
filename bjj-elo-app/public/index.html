@@ -2,15 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Mat Rank — BJJ Elo Rankings</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/styles.css" />
+<link rel="stylesheet" href="/css/legal.css" />
 </head>
 <body>
   <div id="app"></div>
+  <button class="cookie-settings" type="button" data-cookie-notice>Cookie information</button>
+  <footer class="legal-footer"><nav aria-label="Legal and support"><a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a><a href="/cookies.html">Cookies</a><a href="mailto:badrc124@gmail.com">Help / report a concern</a></nav><p>We use an essential sign-in cookie to keep your account signed in. No advertising or analytics cookies.</p></footer>
 
   <!-- Load order matters: each file attaches to the shared `App` global. -->
   <script src="/js/constants.js"></script>
@@ -23,6 +23,8 @@
   <script src="/js/views/requests.js"></script>
   <script src="/js/views/matches.js"></script>
   <script src="/js/views/feed.js"></script>
+  <script src="/js/views/account.js"></script>
   <script src="/js/main.js"></script>
+  <script src="/js/cookies.js"></script>
 </body>
 </html>

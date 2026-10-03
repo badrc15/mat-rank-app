@@ -11,14 +11,7 @@ function computeBadgesFor(me, matches, rivals) {
   });
   if (giantKill) badges.push({ icon: "⚔️", label: "Giant Killer", desc: "Beat someone rated 150+ above you" });
 
-  const chrono = resolved.slice().sort((a, b) => a.resolvedAt - b.resolvedAt).reverse();
-  let streak = 0;
-  for (const m of chrono) {
-    if (App.outcomeForMe(m, me.id) === "win") streak++;
-    else break;
-  }
-  if (streak >= 3) badges.push({ icon: "🔥", label: `${streak}-win streak`, desc: "Currently on a run" });
-
+  // Batch recaps do not establish round order, so do not infer win streaks.
   if ((me.matchesPlayed || 0) >= 30) {
     badges.push({ icon: "🛡️", label: "Established", desc: "30+ logged fights at this belt" });
   }
@@ -92,14 +85,12 @@ App.views.profile = {
       ? App.state.fighters.slice().sort((a, b) => b.elo - a.elo).findIndex((f) => f.id === me.id) + 1
       : null;
     const total = App.state.fighters.length || null;
-    const blocked = App.state.requestsData ? !App.state.requestsData.canSendRequests : false;
     const badges = computeBadgesFor(me, matches, rivals);
     const loggedToday = me.streak.lastLogDate === new Date().toISOString().slice(0, 10);
     const topRival = rivals.length && rivals[0].matches >= 2 ? rivals[0] : null;
     const bm = App.beltMeta(me.belt);
 
     main.innerHTML = `
-      ${blocked ? `<div class="block-banner">You have an unresolved match. You can't request new opponents until both sides agree on the result — check the Matches tab.</div>` : ""}
       ${ui.promotionNote ? `<div class="promo-banner">Promoted to ${App.beltMeta(ui.promotionNote.toBelt).label} belt — Elo reset from ${ui.promotionNote.fromElo} to ${ui.promotionNote.toElo}, the starting point for that belt.</div>` : ""}
 
       <div class="rating-card">
@@ -178,7 +169,7 @@ App.views.profile = {
       </div>
       <div class="section-title">How this works</div>
       <div style="font-size:13px;color:var(--ink-dim);line-height:1.6;">
-        Send a request before you fight. Once your opponent accepts, it becomes a scheduled match. After the fight, both of you log the result from your own side. Elo only updates once your accounts agree — if they don't match, you'll both be asked to re-enter it.
+        Train first, log afterwards. Use Log rolls to record the partners and rounds you remember. Partners review the recap whenever they return. Elo changes only after both agree; no-winner and unverified rounds do not affect ratings. You never need to record every roll.
       </div>
     `;
 

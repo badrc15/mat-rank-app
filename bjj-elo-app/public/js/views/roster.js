@@ -3,9 +3,9 @@ App.views = App.views || {};
 
 function fighterRow(f, blocked, me, pendingToIds, rankLabel) {
   const isMe = f.id === me.id;
-  const pending = pendingToIds.has(f.id);
-  const disabled = blocked || pending;
-  const label = pending ? "Requested" : "Request";
+  const pending = false;
+  const disabled = false;
+  const label = "Log rolls";
   const bm = App.beltMeta(f.belt);
   return `<div class="row">
     <div>
@@ -35,12 +35,8 @@ App.views.roster = {
     const ui = App.state.ui;
     const me = App.state.me;
     const all = App.state.fighters.slice().sort((a, b) => b.elo - a.elo);
-    const blocked = App.state.requestsData ? !App.state.requestsData.canSendRequests : false;
-    const pendingToIds = new Set(
-      ((App.state.requestsData && App.state.requestsData.outgoing) || [])
-        .filter((r) => r.status === "pending")
-        .map((r) => r.fighter.id)
-    );
+    const blocked = false;
+    const pendingToIds = new Set();
 
     if (all.length <= 1) {
       main.innerHTML = App.emptyState("No other fighters yet. Invite training partners to create accounts and they'll show up here.");
@@ -123,9 +119,8 @@ App.views.roster = {
       scope.querySelectorAll("[data-req]").forEach((b) => {
         b.onclick = async () => {
           try {
-            await App.api.sendRequest(parseInt(b.dataset.req, 10));
-            await App.refreshTab("roster");
-            await App.refreshTab("requests", true);
+            App.state.ui.selectedRollPartner = Number(b.dataset.req);
+            await App.setTab("requests");
           } catch (err) {
             alert(err.message);
           }

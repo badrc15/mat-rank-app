@@ -4,7 +4,7 @@ App.state = {
   me: null, // current fighter, once logged in
   activeTab: "profile",
   fighters: [], // roster cache
-  requestsData: null, // { incoming, outgoing, canSendRequests }
+  recapsData: null, // after-training summaries visible only to their participants
   matchesData: null, // { matches, rivals }
   feedData: null, // { feed }
 

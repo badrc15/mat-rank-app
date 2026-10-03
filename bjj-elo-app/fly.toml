@@ -8,6 +8,12 @@ primary_region = 'lhr'
 
 [build]
 
+[env]
+  NODE_ENV = 'production'
+  DATA_DIR = '/data'
+  APP_ORIGIN = 'https://bjj-elo-app.fly.dev'
+  SIGNUPS_ENABLED = 'false'
+
 [http_service]
   internal_port = 3000
   force_https = true
@@ -25,3 +31,11 @@ primary_region = 'lhr'
 [[mounts]]
   source = "matrank_data"
   destination = "/data"
+  snapshot_retention = 7
+
+[[http_service.checks]]
+  interval = '30s'
+  timeout = '5s'
+  grace_period = '15s'
+  method = 'GET'
+  path = '/health'

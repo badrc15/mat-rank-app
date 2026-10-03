@@ -42,11 +42,11 @@ async function loadCommon() {
   const [{ fighter }, { fighters }, reqData] = await Promise.all([
     App.api.getMe(),
     App.api.getFighters(),
-    App.api.getRequests(),
+    App.api.getRecaps(),
   ]);
   App.state.me = fighter;
   App.state.fighters = fighters;
-  App.state.requestsData = reqData;
+  App.state.recapsData = reqData;
 }
 
 App.loadTabData = async function (tab) {
@@ -74,14 +74,19 @@ App.enterApp = async function () {
   await App.setTab(App.state.activeTab || "profile");
 };
 
-App.logout = function () {
-  App.api.logout();
+App.logout = async function () {
+  try { await App.api.logout(); } catch { alert("Could not sign out. Check your connection and try again."); return; }
   App.state.me = null;
   App.state.fighters = [];
-  App.state.requestsData = null;
+  App.state.recapsData = null;
   App.state.matchesData = null;
   App.state.feedData = null;
   App.state.activeTab = "profile";
+  App.state.ui.rollDraft = null;
+    App.state.ui.recapEdit = null;
+    App.state.ui.rollMessage = null;
+    App.state.ui.recapMessage = null;
+    App.state.ui.selectedRollPartner = null;
   App.render();
 };
 
@@ -93,20 +98,21 @@ App.render = function () {
   }
 
   const me = App.state.me;
-  const incomingCount = ((App.state.requestsData && App.state.requestsData.incoming) || []).length;
+  const incomingCount = (App.state.recapsData?.recaps || []).filter(r => r.needsReview).length;
   const activeTab = App.state.activeTab;
 
   root.innerHTML = `
     <header>
       <div class="top-row">
         <div class="who">Logged in as <b>${me.username}</b></div>
+        <button class="switch-btn" id="accountBtn">Account & privacy</button>
         <button class="switch-btn" id="logoutBtn">Log out</button>
       </div>
     </header>
     <nav class="tabs" id="tabs">
       ${["profile", "roster", "requests", "matches", "feed"].map((t) => {
-        const label = t === "profile" ? "Profile" : t === "roster" ? "Roster" : t === "requests" ? "Requests" : t === "matches" ? "Matches" : "Feed";
-        const badge = t === "requests" && incomingCount ? `<span class="count">${incomingCount}</span>` : "";
+        const label = t === "profile" ? "Profile" : t === "roster" ? "Roster" : t === "requests" ? "Log rolls" : t === "matches" ? "Recaps" : "Feed";
+        const badge = t === "matches" && incomingCount ? `<span class="count">${incomingCount}</span>` : "";
         return `<button data-tab="${t}" class="${activeTab === t ? "active" : ""}">${badge}${iconFor(t, activeTab === t)}${label}</button>`;
       }).join("")}
     </nav>
@@ -114,6 +120,7 @@ App.render = function () {
   `;
 
   document.getElementById("logoutBtn").onclick = () => App.logout();
+  document.getElementById("accountBtn").onclick = () => App.setTab("account");
   root.querySelectorAll("nav.tabs button").forEach((b) => {
     b.onclick = () => App.setTab(b.dataset.tab);
   });
@@ -123,9 +130,15 @@ App.render = function () {
 };
 
 async function boot() {
-  const token = App.api.getToken();
-  if (!token) {
-    App.views.auth.render(document.getElementById("app"));
+  try { App.config = await App.api.config(); } catch {}
+  const link = new URLSearchParams(location.hash.slice(1));
+  const kind = link.has('reset') ? 'reset' : link.has('verify') ? 'verify' : null;
+  if (kind) {
+    App.state.ui.authMode = kind;
+    App.state.ui.authToken = link.get(kind);
+    history.replaceState(null, '', location.pathname);
+    App.state.me = null;
+    App.render();
     return;
   }
   try {
@@ -133,7 +146,7 @@ async function boot() {
     App.state.me = fighter;
     await App.enterApp();
   } catch (err) {
-    App.api.setToken(null);
+    if (err.status !== 401) App.state.ui.authError = "Could not restore your session. Check your connection and refresh. Your account is still saved.";
     App.views.auth.render(document.getElementById("app"));
   }
 
@@ -141,6 +154,7 @@ async function boot() {
   // disrupting anything the person is mid-typing or mid-picking.
   setInterval(async () => {
     if (!App.state.me) return;
+    if (["account", "requests", "matches"].includes(App.state.activeTab) || document.hidden) return;
     const active = document.activeElement;
     const isTyping = active && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName);
     if (isTyping || App.state.ui.methodPromptFor) return;

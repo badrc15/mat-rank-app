@@ -4,10 +4,12 @@
   "description": "BJJ Elo ranking app with mutual match confirmation, gyms, and a match feed",
   "main": "server/index.js",
   "scripts": {
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "test": "node --test test/*.test.js",
+    "backup": "node scripts/backup.js"
   },
   "engines": {
-    "node": ">=22.5.0"
+    "node": ">=22.20.0"
   },
   "license": "UNLICENSED",
   "private": true

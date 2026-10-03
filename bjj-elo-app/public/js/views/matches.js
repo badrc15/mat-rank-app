@@ -1,165 +1,19 @@
 window.App = window.App || {};
 App.views = App.views || {};
-
 App.views.matches = {
-  render(main) {
-    const ui = App.state.ui;
-    const me = App.state.me;
-    const data = App.state.matchesData || { matches: [], rivals: [] };
-    const matches = data.matches || [];
-    const rivals = data.rivals || [];
-
-    if (matches.length === 0) {
-      main.innerHTML = App.emptyState(
-        "No scheduled fights yet. Accept a request to open a match here."
-      );
-      return;
-    }
-
-    const open = matches.filter((m) => m.status !== "resolved");
-    const topRivalId =
-      rivals.length && rivals[0].matches >= 2 ? rivals[0].opp : null;
-
-    let html = `<div class="section-title">Open (${open.length})</div>`;
-
-    if (open.length === 0) {
-      html += `<div style="padding:4px 0 4px;color:var(--ink-dim);font-size:13px;">
-        Nothing pending — send a request from the Roster tab before your next roll.
-      </div>`;
-    } else {
-      html += open
-        .map((m) => {
-          const isA = m.fighterA.id === me.id;
-          const opp = isA ? m.fighterB : m.fighterA;
-          const myResult = m.myResult;
-
-          let body = "";
-
-          if (m.conflict) {
-            body += `<div class="conflict-banner">
-              Your results didn't match. Enter it again — once you both agree, elo updates.
-            </div>`;
-          }
-
-          if (myResult) {
-            body += `<div class="match-status">
-              You logged it. Waiting on ${opp.username} to confirm.
-            </div>`;
-          } else if (ui.methodPromptFor === m.id) {
-            body += `<div class="match-status">How did it end?</div>
-              <div class="result-btns method-btns">
-                ${App.METHODS.map(
-                  (mo) =>
-                    `<button class="btn btn-primary" data-submit="${m.id}|win:${mo.id}">
-                      ${mo.label}
-                    </button>`
-                ).join("")}
-              </div>
-              <button class="btn btn-ghost" style="margin-top:8px;" data-cancel-method="${m.id}">
-                Back
-              </button>`;
-          } else {
-            body += `<div class="match-status">Log how the fight went.</div>
-              <div class="result-btns">
-                <button class="btn btn-primary" data-open-method="${m.id}">
-                  I won
-                </button>
-                <button class="btn btn-decline" data-submit="${m.id}|loss">
-                  I lost
-                </button>
-              </div>`;
-          }
-
-          return `<div class="match-card">
-            <div class="match-vs">
-              <span class="vname">${me.username}</span>
-              <span class="vsplit">vs</span>
-              <span class="vname">${opp.username}</span>
-            </div>
-            ${body}
-          </div>`;
-        })
-        .join("");
-    }
-
-    html += `<div class="section-title">Fight history</div>`;
-
-    if (rivals.length === 0) {
-      html += `<div style="padding:4px 0 20px;color:var(--ink-dim);font-size:13px;">
-        No confirmed results yet.
-      </div>`;
-    } else {
-      html += rivals
-        .map(
-          (r) => `<div class="row">
-            <div>
-              <div class="fighter-name">
-                ${r.fighter.username}${
-            r.opp === topRivalId
-              ? '<span class="rival-tag">rival</span>'
-              : ""
-          }
-              </div>
-              <div class="fighter-meta">
-                ${r.matches} fight${r.matches === 1 ? "" : "s"} together
-              </div>
-            </div>
-            <div class="fighter-elo display">${r.w}-${r.l}</div>
-          </div>`
-        )
-        .join("");
-    }
-
-    main.innerHTML = html;
-
-    // Handle "I won" button
-    main.querySelectorAll("[data-open-method]").forEach((b) => {
-      b.addEventListener("click", (event) => {
-        event.preventDefault();
-
-        ui.methodPromptFor = Number(b.dataset.openMethod);
-        App.render();
-      });
-    });
-
-    // Handle "Back" button
-    main.querySelectorAll("[data-cancel-method]").forEach((b) => {
-      b.addEventListener("click", (event) => {
-        event.preventDefault();
-
-        ui.methodPromptFor = null;
-        App.render();
-      });
-    });
-
-    // Handle result submission buttons
-    main.querySelectorAll("[data-submit]").forEach((b) => {
-      b.addEventListener("click", async (event) => {
-        event.preventDefault();
-
-        const [mid, resultStr] = b.dataset.submit.split("|");
-        ui.methodPromptFor = null;
-
-        const [outcome, method] = resultStr.split(":");
-
-        try {
-          const { notable } = await App.api.submitResult(
-            mid,
-            outcome,
-            method || undefined
-          );
-
-          if (notable) {
-            setTimeout(() => App.fireConfetti(), 150);
-          }
-
-          await App.refreshTab("matches");
-          await App.refreshTab("profile", true);
-        } catch (err) {
-          console.error("Failed to submit match result:", err);
-          alert(err.message);
-        }
-      });
-    });
-  },
+ render(main) {
+  const ui=App.state.ui, rows=App.state.recapsData?.recaps||[];
+  const pending=rows.filter(r=>r.status==='pending'), closed=rows.filter(r=>r.status!=='pending');
+  const card=r=>`<article class="match-card"><h3>${r.opponent.username}</h3><p>${App.escapeHtml(r.date)} · ${r.wins} wins for you · ${r.losses} for them · ${r.noWinner} with no winner</p>
+  ${r.status==='pending'?`<p>${r.needsReview?'Your partner recorded these counts. Do they look right?':'Waiting for your partner to review.'} Expires ${new Date(r.expiresAt).toLocaleDateString('en-GB')}.</p>
+  ${r.needsReview?`<div class="recap-actions"><button class="btn btn-primary" data-action="confirm" data-id="${r.id}">Confirm</button><button class="btn btn-ghost" data-edit="${r.id}">Correct</button><button class="btn btn-ghost" data-action="skip" data-id="${r.id}">I don't remember</button></div>`:`<button class="btn btn-ghost" data-action="withdraw" data-id="${r.id}">Withdraw recap</button>`}
+  ${ui.recapEdit===r.id?`<form id="correctForm" data-id="${r.id}"><p>Enter counts from your perspective. Your partner must confirm the correction.</p><div class="round-counts">${[['wins','My wins',r.wins],['losses','Their wins',r.losses],['noWinner','No winner',r.noWinner]].map(([key,label,n])=>`<label>${label}<input name="${key}" type="number" min="0" max="20" step="1" required value="${n}"></label>`).join('')}</div><button class="btn btn-primary">Send correction</button><button type="button" class="btn btn-ghost" id="cancelCorrection">Cancel</button></form>`:''}`:`<p>${({confirmed:'Confirmed by both fighters',unverified:'Unverified — no rating change',expired:'Expired — no rating change',withdrawn:'Withdrawn — no rating change'})[r.status]||App.escapeHtml(r.status)}</p>`}</article>`;
+  main.innerHTML=`<section class="recap-panel"><h1>After-training recaps</h1><p>No need to record every roll. Unanswered recaps expire after 14 days without a penalty. “I don't remember” closes a recap without changing either rating.</p><div class="recap-actions"><button class="btn btn-primary" id="logMore">Log rolls</button><button class="btn btn-ghost" id="refreshRecaps">Refresh</button></div><p role="status">${App.escapeHtml(ui.recapMessage||ui.rollMessage||'')}</p><h2>Waiting for agreement (${pending.length})</h2>${pending.length?pending.map(card).join(''):'<p>Nothing waiting. Train first and add your recap afterwards.</p>'}<h2>Past recaps</h2>${closed.length?closed.map(card).join(''):'<p>No past recaps yet.</p>'}<h2>Earlier confirmed matches</h2><p>Confirmed matches from the previous workflow remain in your profile and feed. Unfinished advance requests have been retired; log any completed rounds through a recap.</p></section>`;
+  main.querySelector('#logMore').onclick=()=>App.setTab('requests');
+  main.querySelector('#refreshRecaps').onclick=async()=>{try{await App.refreshTab('matches');}catch(err){ui.recapMessage=err.message;App.render();}};
+  const review=async(id,body)=>{const r=rows.find(r=>r.id===id);main.querySelectorAll('button').forEach(b=>b.disabled=true);try{await App.api.reviewRecap(id,{...body,version:r.version});ui.recapEdit=null;ui.rollMessage=null;ui.recapMessage=body.action==='confirm'?'Confirmed. Agreed wins and losses are now included in your rating.':body.action==='correct'?'Correction sent to your partner. Ratings have not changed.':'Closed without a rating change.';await App.refreshTab('matches');}catch(err){ui.recapMessage=err.message;App.render();}};
+  main.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>review(Number(b.dataset.id),{action:b.dataset.action}));
+  main.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{ui.recapEdit=Number(b.dataset.edit);App.render();});
+  const form=main.querySelector('#correctForm');if(form){form.onsubmit=e=>{e.preventDefault();const data=new FormData(form);review(Number(form.dataset.id),{action:'correct',wins:Number(data.get('wins')),losses:Number(data.get('losses')),noWinner:Number(data.get('noWinner'))});};main.querySelector('#cancelCorrection').onclick=()=>{ui.recapEdit=null;App.render();};}
+ }
 };

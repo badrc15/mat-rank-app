@@ -4,11 +4,15 @@ const path = require("path");
 const fs = require("fs");
 const { DatabaseSync } = require("node:sqlite");
 
-const dataDir = "/data";
+const dataDir = process.env.DATA_DIR || path.join(__dirname, "..", "data");
+if (process.env.NODE_ENV === 'production' && process.env.RAILWAY_PROJECT_ID && process.env.RAILWAY_VOLUME_MOUNT_PATH !== dataDir) {
+  throw new Error('Attach a persistent Railway volume at DATA_DIR before starting Mat Rank.');
+}
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
 const dbPath = path.join(dataDir, "matrank.db");
 const db = new DatabaseSync(dbPath);
+db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000; PRAGMA secure_delete = ON;");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS fighters (
@@ -76,4 +80,44 @@ db.exec(`
   );
 `);
 
+// Additive migrations preserve existing accounts and match history.
+const columns = db.prepare("PRAGMA table_info(fighters)").all();
+for (const [name, type] of [["terms_version", "TEXT"], ["terms_accepted_at", "INTEGER"], ["privacy_version", "TEXT"], ["email", "TEXT"], ["email_verified_at", "INTEGER"], ["adult_confirmed_at", "INTEGER"]]) {
+  if (!columns.some(c => c.name === name)) db.exec(`ALTER TABLE fighters ADD COLUMN ${name} ${type}`);
+}
+db.exec(`CREATE TABLE IF NOT EXISTS rate_limits (key TEXT PRIMARY KEY, count INTEGER NOT NULL, resets_at INTEGER NOT NULL);
+  CREATE INDEX IF NOT EXISTS sessions_fighter ON sessions(fighter_id);`);
+
 module.exports = db;
+db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS fighters_email ON fighters(email COLLATE NOCASE) WHERE email IS NOT NULL;
+CREATE TABLE IF NOT EXISTS email_verifications (
+ token_hash TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, username TEXT NOT NULL,
+ password_hash TEXT NOT NULL, salt TEXT NOT NULL, fighter_id INTEGER,
+ terms_version TEXT NOT NULL, privacy_version TEXT NOT NULL, accepted_at INTEGER NOT NULL,
+ expires_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS password_resets (
+ token_hash TEXT PRIMARY KEY, fighter_id INTEGER NOT NULL, password_hash TEXT NOT NULL,
+ expires_at INTEGER NOT NULL
+);`);
+db.exec(`CREATE TABLE IF NOT EXISTS roll_recaps (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  fighter_a_id INTEGER NOT NULL, fighter_b_id INTEGER NOT NULL,
+  roll_date TEXT NOT NULL, wins_a INTEGER NOT NULL, wins_b INTEGER NOT NULL,
+  no_winner INTEGER NOT NULL, proposed_by INTEGER NOT NULL,
+  version INTEGER NOT NULL DEFAULT 1, status TEXT NOT NULL DEFAULT 'pending',
+  created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, confirmed_at INTEGER,
+  UNIQUE(fighter_a_id, fighter_b_id, roll_date)
+);
+CREATE INDEX IF NOT EXISTS recaps_participants ON roll_recaps(fighter_b_id, status);
+CREATE TABLE IF NOT EXISTS recap_migrations (name TEXT PRIMARY KEY);
+`);
+// Retire unfinished pre-training requests once. Confirmed history is preserved.
+if (!db.prepare("SELECT 1 FROM recap_migrations WHERE name = 'after-training-v1'").get()) {
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.exec("UPDATE requests SET status = 'retired' WHERE status = 'pending'; UPDATE matches SET status = 'retired' WHERE status != 'resolved'");
+    db.prepare("INSERT INTO recap_migrations VALUES (?)").run('after-training-v1');
+    db.exec("COMMIT");
+  } catch (err) { db.exec("ROLLBACK"); throw err; }
+}

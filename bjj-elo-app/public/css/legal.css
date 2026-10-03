@@ -1,0 +1,35 @@
+/* Account and legal controls share the existing Mat Rank palette. */
+.legal-footer { padding: 24px 16px; text-align: center; font-size: 13px; line-height: 1.8; color: #aaa; }
+.legal-footer a, .account-panel a, .consent a, .legal-page a { color: #d6b74f; text-decoration: underline; }
+.legal-footer nav { display: flex; justify-content: center; flex-wrap: wrap; gap: 16px; }
+.legal-footer p { margin: 8px auto; max-width: 640px; }
+.consent { display: flex; align-items: flex-start; gap: 10px; text-align: left; font-size: 14px; line-height: 1.5; margin: 14px 0; }
+.consent input { width: auto !important; margin-top: 5px; flex: 0 0 auto; }
+.account-panel, .legal-page { max-width: 740px; margin: 0 auto; padding: 24px 20px; line-height: 1.7; }
+.account-panel h1, .legal-page h1 { font-size: 30px; }
+.account-panel h2, .legal-page h2 { margin-top: 28px; font-size: 21px; }
+.account-panel form { display: grid; gap: 10px; max-width: 440px; }
+.account-panel input { box-sizing: border-box; width: 100%; padding: 12px; color: inherit; background: #191919; border: 1px solid #666; border-radius: 6px; font: inherit; }
+.account-panel button { padding: 12px; cursor: pointer; border: 1px solid #888; border-radius: 6px; }
+.account-panel .danger { background: #522; color: #fff; }
+#accountStatus { color: #d6b74f; }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid #d6b74f; outline-offset: 3px; }
+.legal-note { border: 1px solid #bda14c; border-radius: 8px; padding: 16px; }
+.recap-panel h1 { font-size: 24px; margin: 8px 0 16px; }
+.recap-panel h2 { font-size: 19px; margin-top: 26px; }
+.recap-panel p { line-height: 1.6; color: var(--ink-dim); font-size: 14px; }
+.recap-panel fieldset { border: 1px solid var(--line); border-radius: 10px; margin: 18px 0; padding: 14px; min-width: 0; }
+.recap-panel input, .recap-panel select { display: block; width: 100%; padding: 12px 8px; margin: 8px 0 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg-raised); color: var(--ink); font: inherit; }
+.round-counts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin-top: 12px; }
+.round-counts label { font-size: 14px; }
+.recap-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.recap-panel button { margin: 4px 0; white-space: normal; }
+.top-row { gap: 8px; flex-wrap: wrap; }
+@media(max-width:360px) { .round-counts { grid-template-columns: 1fr; } }
+.cookie-notice { position:fixed; z-index:1000; bottom:16px; left:16px; right:16px; max-width:480px; margin:auto; padding:20px; background:#24241b; color:#edeae3; border:1px solid #807245; border-radius:14px; box-shadow:0 8px 35px #0008; }
+.cookie-notice h2 {margin:0 0 10px;font-size:1.15rem;}
+.cookie-notice p {margin:8px 0;line-height:1.5;}
+.cookie-notice a {color:#e0bd50;}
+.cookie-settings {display:block;margin:16px auto;}
+.auth-link {margin-top:16px;}
+.auth-error:empty, .auth-hint:empty {display:none;}

@@ -1,23 +1,15 @@
 window.App = window.App || {};
 
 (function () {
-  const TOKEN_KEY = "matrank_token";
-
-  function getToken() {
-    return localStorage.getItem(TOKEN_KEY);
-  }
-  function setToken(token) {
-    if (token) localStorage.setItem(TOKEN_KEY, token);
-    else localStorage.removeItem(TOKEN_KEY);
-  }
+  // Remove obsolete bearer tokens; authentication now uses an HttpOnly cookie.
+  try { localStorage.removeItem("matrank_token"); } catch {}
 
   async function request(method, path, body) {
-    const headers = { "Content-Type": "application/json" };
-    const token = getToken();
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const headers = { "Content-Type": "application/json", "X-Matrank-Request": "1" };
 
     const res = await fetch(path, {
       method,
+      credentials: "same-origin",
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
@@ -38,12 +30,18 @@ window.App = window.App || {};
   }
 
   App.api = {
-    getToken,
-    setToken,
-
-    register: (username, password) => request("POST", "/api/register", { username, password }),
-    login: (username, password) => request("POST", "/api/login", { username, password }),
-    logout: () => setToken(null),
+    register: (username, password, consent) => request("POST", "/api/register", { username, password, ...consent }),
+    login: (email, password) => request("POST", "/api/login", { email, password }),
+    forgotPassword: email => request("POST", "/api/forgot-password", {email}),
+    resetPassword: (token,password) => request("POST", "/api/reset-password", {token,password}),
+    verifyEmail: token => request("POST", "/api/verify-email", {token}),
+    getEmail: () => request("GET", "/api/me/email"),
+    addEmail: (email,password) => request("POST", "/api/me/email", {email,password}),
+    logout: () => request("POST", "/api/logout", {}),
+    config: () => request("GET", "/api/config"),
+    changePassword: (currentPassword, newPassword) => request("POST", "/api/me/password", { currentPassword, newPassword }),
+    logoutAll: () => request("POST", "/api/me/logout-all", {}),
+    deleteAccount: (password, confirm) => request("DELETE", "/api/me", { password, confirm }),
 
     getMe: () => request("GET", "/api/me"),
     updateMe: (patch) => request("PATCH", "/api/me", patch),
@@ -51,13 +49,11 @@ window.App = window.App || {};
 
     getFighters: () => request("GET", "/api/fighters"),
 
-    getRequests: () => request("GET", "/api/requests"),
-    sendRequest: (toId) => request("POST", "/api/requests", { toId }),
-    respondRequest: (id, accept) => request("PATCH", `/api/requests/${id}`, { accept }),
+    getRecaps: () => request("GET", "/api/recaps"),
+    saveRecaps: (draft) => request("POST", "/api/recaps", draft),
+    reviewRecap: (id, body) => request("POST", `/api/recaps/${id}/review`, body),
 
     getMatches: () => request("GET", "/api/matches"),
-    submitResult: (matchId, outcome, method) =>
-      request("POST", `/api/matches/${matchId}/result`, { outcome, method }),
     likeMatch: (matchId) => request("POST", `/api/matches/${matchId}/like`),
     addComment: (matchId, text, parentId) =>
       request("POST", `/api/matches/${matchId}/comments`, { text, parentId }),

@@ -2,17 +2,7 @@ const db = require("../db");
 const { sendJson } = require("../router");
 const { requireAuth } = require("../auth");
 const { publicFighter } = require("../serialize");
-const { computeEloUpdate } = require("../elo");
 const { sanitizeText } = require("../sanitize");
-
-const METHODS = ["submission", "points", "decision"];
-
-function parseResult(r) {
-  if (!r) return null;
-  if (r === "loss") return { outcome: "loss", method: null };
-  const [outcome, method] = r.split(":");
-  return { outcome, method };
-}
 
 function matchHistoryFor(fighterId) {
   return db
@@ -27,16 +17,6 @@ function outcomeForMe(m, fighterId) {
   const iAmA = m.fighter_a_id === fighterId;
   const iWon = (m.winner === "A" && iAmA) || (m.winner === "B" && !iAmA);
   return iWon ? "win" : "loss";
-}
-
-function currentWinStreak(fighterId) {
-  const history = matchHistoryFor(fighterId).reverse();
-  let streak = 0;
-  for (const m of history) {
-    if (outcomeForMe(m, fighterId) === "win") streak++;
-    else break;
-  }
-  return streak;
 }
 
 function shapeMatch(m, viewerId) {
@@ -89,77 +69,6 @@ module.exports = function matchesRoutes(router) {
       }));
 
     sendJson(res, 200, { matches: shaped, rivals });
-  });
-
-  router.post("/api/matches/:id/result", async (req, res, { params, body }) => {
-    const fighterId = requireAuth(req);
-    if (!fighterId) return sendJson(res, 401, { error: "Not authenticated" });
-
-    const m = db.prepare("SELECT * FROM matches WHERE id = ?").get(params.id);
-    if (!m) return sendJson(res, 404, { error: "Match not found." });
-    if (m.fighter_a_id !== fighterId && m.fighter_b_id !== fighterId) {
-      return sendJson(res, 403, { error: "Not your match." });
-    }
-    if (m.status === "resolved") return sendJson(res, 409, { error: "Match already resolved." });
-
-    const outcome = body.outcome;
-    const method = body.method;
-    if (!["win", "loss"].includes(outcome)) return sendJson(res, 400, { error: "Invalid outcome." });
-    if (outcome === "win" && !METHODS.includes(method)) {
-      return sendJson(res, 400, { error: "Method required for a win." });
-    }
-
-    const isA = m.fighter_a_id === fighterId;
-    const resultStr = outcome === "win" ? `win:${method}` : "loss";
-    const field = isA ? "result_a" : "result_b";
-    db.prepare(`UPDATE matches SET ${field} = ? WHERE id = ?`).run(resultStr, m.id);
-
-    let notable = false;
-    const updated = db.prepare("SELECT * FROM matches WHERE id = ?").get(m.id);
-
-    if (updated.result_a && updated.result_b) {
-      const ra = parseResult(updated.result_a);
-      const rb = parseResult(updated.result_b);
-      let winner = null;
-      if (ra.outcome === "win" && rb.outcome === "loss") winner = "A";
-      else if (ra.outcome === "loss" && rb.outcome === "win") winner = "B";
-
-      if (winner === null) {
-        // Both claimed to win, or both claimed to lose — disagreement. Reset and ask again.
-        db.prepare(`UPDATE matches SET conflict = 1, result_a = NULL, result_b = NULL WHERE id = ?`).run(m.id);
-      } else {
-        const fa = db.prepare("SELECT * FROM fighters WHERE id = ?").get(m.fighter_a_id);
-        const fb = db.prepare("SELECT * FROM fighters WHERE id = ?").get(m.fighter_b_id);
-        const { newA, newB, changeA, changeB } = computeEloUpdate(
-          fa.elo,
-          fb.elo,
-          fa.matches_played,
-          fb.matches_played,
-          winner
-        );
-        const methodUsed = winner === "A" ? ra.method : rb.method;
-
-        db.prepare("UPDATE fighters SET elo = ?, matches_played = matches_played + 1 WHERE id = ?").run(newA, fa.id);
-        db.prepare("UPDATE fighters SET elo = ?, matches_played = matches_played + 1 WHERE id = ?").run(newB, fb.id);
-        db.prepare(
-          `UPDATE matches SET status = 'resolved', winner = ?, method = ?, conflict = 0,
-             pre_elo_a = ?, pre_elo_b = ?, elo_change_a = ?, elo_change_b = ?, resolved_at = ?
-           WHERE id = ?`
-        ).run(winner, methodUsed, fa.elo, fb.elo, changeA, changeB, Date.now(), m.id);
-
-        const winnerId = winner === "A" ? m.fighter_a_id : m.fighter_b_id;
-        const loserPre = winner === "A" ? fb.elo : fa.elo;
-        const winnerPre = winner === "A" ? fa.elo : fb.elo;
-        const giantKill = loserPre - winnerPre >= 150;
-        const winStreak = currentWinStreak(winnerId);
-        const milestoneStreak = winStreak === 3 || winStreak === 5 || (winStreak >= 10 && winStreak % 5 === 0);
-        const firstWinEver = matchHistoryFor(winnerId).length === 1;
-        notable = (giantKill || milestoneStreak || firstWinEver) && winnerId === fighterId;
-      }
-    }
-
-    const finalMatch = db.prepare("SELECT * FROM matches WHERE id = ?").get(m.id);
-    sendJson(res, 200, { match: shapeMatch(finalMatch, fighterId), notable });
   });
 
   router.post("/api/matches/:id/like", async (req, res, { params }) => {

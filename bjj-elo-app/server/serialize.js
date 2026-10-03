@@ -1,6 +1,6 @@
 // Never leaks password_hash/salt to the client.
 function publicFighter(row) {
-  if (!row) return null;
+  if (!row) return { id: null, username: "Deleted account", elo: 0, belt: "white", weight: "", gender: "", gym: "", matchesPlayed: 0, streak: { current: 0, longest: 0, lastLogDate: null } };
   return {
     id: row.id,
     username: row.username,

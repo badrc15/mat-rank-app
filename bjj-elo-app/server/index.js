@@ -2,11 +2,21 @@ const http = require("http");
 const path = require("path");
 const fs = require("fs");
 const { Router } = require("./router");
+const { security } = require("./security");
+const db = require("./db");
+function cleanExpiredRecords() {
+  db.prepare("DELETE FROM sessions WHERE created_at <= ?").run(Date.now() - 7 * 86400000);
+  db.prepare("DELETE FROM rate_limits WHERE resets_at <= ?").run(Date.now());
+  db.prepare("DELETE FROM email_verifications WHERE expires_at <= ?").run(Date.now());
+  db.prepare("DELETE FROM password_resets WHERE expires_at <= ?").run(Date.now());
+}
+cleanExpiredRecords();
+setInterval(cleanExpiredRecords, 3600000).unref();
 
 const router = new Router();
 require("./routes/auth")(router);
 require("./routes/fighters")(router);
-require("./routes/requests")(router);
+require("./routes/recaps")(router);
 require("./routes/matches")(router);
 
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
@@ -25,7 +35,7 @@ function serveStatic(req, res) {
   const filePath = path.normalize(path.join(PUBLIC_DIR, requested));
 
   // Prevent path traversal outside the public directory.
-  if (!filePath.startsWith(PUBLIC_DIR)) {
+  if (!filePath.startsWith(PUBLIC_DIR + path.sep)) {
     res.writeHead(403);
     return res.end("Forbidden");
   }
@@ -50,8 +60,15 @@ function serveStatic(req, res) {
 }
 
 const server = http.createServer(async (req, res) => {
+  if (security(req, res)) return;
+  if (req.url === "/health") { res.writeHead(200); return res.end("ok"); }
   if (req.url.startsWith("/api/")) {
-    const handled = await router.handle(req, res);
+    let handled;
+    try { handled = await router.handle(req, res); }
+    catch (err) {
+      if (!res.headersSent) { res.writeHead(err.status || 400, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: err.status === 413 ? "Request too large." : "Invalid request." })); }
+      return;
+    }
     if (!handled && !res.headersSent) {
       res.writeHead(404, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Not found" }));
@@ -60,8 +77,10 @@ const server = http.createServer(async (req, res) => {
   }
   serveStatic(req, res);
 });
+server.requestTimeout = 15000;
+server.headersTimeout = 10000;
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Mat Rank running on port ${PORT}`);
+  console.log(`Mat Rank running on port ${server.address().port}`);
 });
