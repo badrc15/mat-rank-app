@@ -12,7 +12,7 @@ App.views.auth = {
       <p id="authStatus" role="status" class="auth-hint">${App.escapeHtml(ui.authMessage||'')}</p>
       <p id="authError" role="alert" class="auth-error">${App.escapeHtml(ui.authError||'')}</p>
       ${register && App.config?.signupsEnabled===false?'<p class="auth-hint">Registration is not open yet. Email delivery and launch checks are being completed.</p>':''}
-      ${forgot?'<p>Enter your account email. We will send a single-use link to reset your password. Older accounts must first add an email in Account &amp; privacy.</p>':''}
+      ${forgot?(App.config?.emailReady===false?'<p>Email recovery is not available yet. The operator is completing email delivery setup. For help, contact <a href="mailto:badrc124@gmail.com">badrc124@gmail.com</a>.</p>':'<p>Enter your account email. We will send a single-use link to reset your password. Older accounts must first add an email in Account &amp; privacy.</p>'):''}
       ${verify?'<p>Only continue if you requested this account or email verification. Verifying does not sign you in.</p>':''}
       <form id="authForm">
         ${register?'<label for="authUsername">Fighter nickname</label><input id="authUsername" name="nickname" placeholder="A nickname, not your full name" required minlength="2" maxlength="30" autocomplete="nickname">':''}
@@ -20,7 +20,7 @@ App.views.auth = {
         ${!forgot&&!verify?`<label for="authPassword">${reset?'New password':'Password'}</label><input id="authPassword" name="password" type="password" required ${mode==='login'?'':'minlength="15"'} maxlength="128" autocomplete="${mode==='login'?'current-password':'new-password'}">`:''}
         ${register||reset?'<label for="confirmPassword">Confirm password</label><input id="confirmPassword" type="password" required minlength="15" maxlength="128" autocomplete="new-password"><p class="auth-hint">Use a unique passphrase of 15–128 characters.</p>':''}
         ${register?'<label class="consent"><input type="checkbox" id="adult" required><span>I am aged 18 or over and this account is for me.</span></label><label class="consent"><input type="checkbox" id="acceptTerms" required><span>I agree to the <a href="/terms.html" target="_blank" rel="noopener">Terms and Conditions</a> and have read the <a href="/privacy.html" target="_blank" rel="noopener">Privacy Notice</a>.</span></label><p class="auth-hint">Your email stays private. We use it for account verification and security, not marketing.</p>':''}
-        <button type="submit" class="primary" id="authSubmit" ${register&&App.config?.signupsEnabled===false?'disabled':''}>${register?'Send verification email':forgot?'Send reset link':reset?'Reset password':verify?'Verify email':'Sign in'}</button>
+        <button type="submit" class="primary" id="authSubmit" ${(register&&App.config?.signupsEnabled===false)||(forgot&&App.config?.emailReady===false)?'disabled':''}>${register?'Send verification email':forgot?'Send reset link':reset?'Reset password':verify?'Verify email':'Sign in'}</button>
       </form>
       ${mode==='login'?'<button type="button" id="forgotPassword" class="auth-link">Forgot password?</button>':''}
       ${forgot||reset||verify?'<button type="button" data-mode="login" class="auth-link">Back to sign in</button>':''}

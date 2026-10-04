@@ -1,38 +1,33 @@
-# Free hosting preparation — 3 October 2026
+# Deployment status — 4 October 2026
 
-Status: Railway Free, Railway hosting and Resend Free/email have been provisioned. No paid plan was selected. The app is not live: the public URL returns 404 pending Railway CLI sign-in, build-root configuration and a persistent volume.
+Live preview: https://mat-rank-app-production-56cf.up.railway.app
 
-## Candidate: Railway Free
+The tested account and recap release is deployed over HTTPS. Public signup remains closed and emailReady is false because the operator has no verified sender domain. This is a deployed preview, not a completed public launch.
 
-The provider directory and Railway documentation list a $0/month Free plan with $1 of usage credit each month, 0.5 GB RAM and 0.5 GB volume storage. A new account initially has a limited trial, then reverts to Free. This is a limited free allowance, not unlimited free hosting or a guarantee of continuous uptime. Do not activate Hobby/Pro, add a paid subscription, or buy credits under the user's free-only instruction.
+## Hosting and cost
 
-Sources: https://docs.railway.com/pricing/plans and https://docs.railway.com/pricing/free-trial
+Railway project e37af765-6fab-436e-b4a9-b22255d2ac72, service c998d439-bd14-4ec3-8c15-0feaebfe9c8e, environment 6913f993-b5c1-42b4-828e-2b82b018f530.
 
-Render Free cannot mount a persistent local disk, and its free Postgres expires after 30 days. Deploying this app unchanged there would risk losing accounts. Render plus an external free database remains an alternative that requires a database adapter migration.
+Railway's live account API reports a trial with 30 days and approximately $5 credit remaining, underlying plan label HOBBY, and an empty paid-subscriptions list. The Stripe catalog resource is railway/free. No paid subscription was selected. Railway's published trial policy says unused trial credit expires after 30 days and the account then reverts to Free with $1 credit per month. This is a limited allowance, not unlimited uptime. A requested $1 hard usage cap was rejected: the CLI only permits $0 or at least $10. No higher cap was accepted. Idle sleeping is enabled. Verify future billing status before any upgrade.
 
-## Prepared deployment
+Official reference: https://docs.railway.com/pricing/free-trial
 
-`railway.json` describes the existing Docker build, start command, health check and bounded restart policy. It does not provision a volume, choose a plan, set variables, or guarantee a $0 bill.
+One replica is configured in europe-west4-drams3a (Amsterdam). A 500 MB persistent volume is attached at /data. The server refuses to start on Railway unless DATA_DIR matches RAILWAY_VOLUME_MOUNT_PATH. Remote database integrity and restart-persistence testing still require a temporary SSH key; approval is pending. Automated local tests verify database persistence and migrations.
 
-After authentication and confirmation that a Free plan is actually available to this account:
+## Releasing updates
 
-1. Create the app on the Free plan only. Use `bjj-elo-app` as the service root/build context and `/bjj-elo-app/railway.json` as the config path when deploying the repository.
-2. Attach one persistent volume at `/data` before starting the service. Keep one replica; do not use multiple independent SQLite volumes.
-3. Set `NODE_ENV=production`, `DATA_DIR=/data`, `SIGNUPS_ENABLED=false`, and `APP_ORIGIN` to the actual generated HTTPS origin. Use the port supplied by Railway. Do not copy the Fly origin.
-4. Verify the platform's current trusted proxy/client-IP behaviour before changing rate limiting; currently non-Fly requests are grouped by the socket's remote address. Do not blindly trust a client-supplied forwarding header.
-5. Enable supported idle sleeping and verify usage stops within free-plan limits. Do not add a paid backup or other paid add-on. Keep verified backups outside the host under a retention policy.
-6. Back up and reconcile any existing account database before migration. Existing Fly data remains inaccessible because its trial has ended. Do not silently replace it with an empty database or upload local test accounts.
-7. Deploy, verify HTTPS and cookie flags, account persistence after a restart, and the mounted volume. Update the preview policies to the verified hosting processor and region; the current documents still describe the earlier Fly plan.
-8. Keep production registration closed until the existing children's privacy and safety launch gaps are resolved.
+The reviewed source is on GitHub branch codex/production-accounts. The provider-created GitHub binding deployed main when asked to redeploy from source. The old deployment was stopped with the operator's permission. The new code was deployed from a clean git archive containing only tracked files, through railway up with --path-as-root. No credentials, local database or demo accounts were uploaded. Do not use redeploy --from-source until the GitHub binding is fixed and its branch is independently verified.
 
-## Current deployment state — 4 October 2026
+Railway rejected the old railway.json configuration mechanism. The file was removed; service settings now specify rootDirectory=/bjj-elo-app, dockerfilePath=Dockerfile, startCommand=node server/index.js, /health, one replica, idle sleeping and three maximum restart attempts. Use a fresh full-repository git archive for CLI upload so that /bjj-elo-app exists in the uploaded tree. Target the explicit project, service and environment IDs above.
 
-- GitHub repository: badrc15/mat-rank-app, branch codex/production-accounts.
-- Railway project: e37af765-6fab-436e-b4a9-b22255d2ac72.
-- Public address reserved: https://mat-rank-app-production-56cf.up.railway.app (not serving the app yet).
-- Stripe Projects is authenticated. Direct Railway CLI access still requires the user to complete Railway sign-in.
-- The first hosting request failed because the branch had not yet been pushed; that errored record was untracked. A replacement hosting request completed successfully after publishing the branch.
-- Resend Free and an email API resource are provisioned. The operator has no domain; delivery to users is blocked until a sender domain is verified. Do not enable EMAIL_DOMAIN_VERIFIED or SIGNUPS_ENABLED before the necessary checks.
-- The release is now adults-only. Public account signup remains disabled.
+Environment: NODE_ENV=production, DATA_DIR=/data, SIGNUPS_ENABLED=false, EMAIL_DOMAIN_VERIFIED=false, APP_ORIGIN=https://mat-rank-app-production-56cf.up.railway.app.
 
-No local demo database or credentials were pushed to GitHub. Production on Railway refuses to start without a persistent volume mounted at DATA_DIR.
+## Email and launch blockers
+
+Resend Free and an email resource are provisioned. Live delivery requires a domain the operator controls, verified DNS records, a sender address, RESEND_API_KEY configured securely on Railway, and a real delivery test. Do not claim email delivery is working or enable public signup before that. The operator has no domain or public contact postal address yet. This release is adults-only; the age checkbox is self-declaration, not verified age assurance. See LAUNCH-CHECKLIST.md for privacy, moderation, retention and operational requirements.
+
+Earlier Fly data has not been migrated or reconciled. Do not replace it or claim it was imported. A failed provisioning attempt left an empty Railway project 2aba5f90-dbcb-470b-984f-59843291cc27 with no deployment; it is not the live app.
+
+## Verification completed
+
+31 automated tests pass. Live /health returns ok; /api/config returns the current version and closed registration. Terms, Privacy and Cookies return 200. The authentication cookie uses HttpOnly, SameSite=Lax and Secure; HSTS is enabled. Browser checks confirm the updated login, forgot-password link, cookie popup, dismissal persistence and standalone terms page.
