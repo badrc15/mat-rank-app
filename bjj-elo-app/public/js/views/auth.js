@@ -6,7 +6,8 @@ App.views.auth = {
     const register=mode==='register', forgot=mode==='forgot', reset=mode==='reset', verify=mode==='verify';
     const title=register?'Create your account':forgot?'Forgot password?':reset?'Set a new password':verify?'Verify your email':'Welcome back';
     root.innerHTML=`<div class="gate"><div class="gate-mark"></div><h1>Mat Rank</h1>
-      <p>Train first. Log your rolls afterwards. For adults aged 18 and over.</p>
+      <p>Climb the ranks. Settle rivalries. For adults aged 18 and over.</p>
+      <p><a href="/plus.html">Explore Mat Rank Plus</a></p>
       <div class="auth-tabs"><button type="button" class="auth-tab ${mode==='login'?'active':''}" data-mode="login">Sign in</button><button type="button" class="auth-tab ${register?'active':''}" data-mode="register">Create account</button></div>
       <h2>${title}</h2>
       <p id="authStatus" role="status" class="auth-hint">${App.escapeHtml(ui.authMessage||'')}</p>

@@ -78,7 +78,7 @@ module.exports = router => {
       for (const [winner,n] of [['A',r.wins_a],['B',r.wins_b]]) {
         const result = computeEloUpdate(a.elo,b.elo,a.matches_played,b.matches_played,winner);
         for (let i=0;i<n;i++) {
-          db.prepare(`INSERT INTO matches (fighter_a_id,fighter_b_id,status,winner,pre_elo_a,pre_elo_b,elo_change_a,elo_change_b,created_at,resolved_at) VALUES (?,?,'resolved',?,?,?,?,?,?,?)`).run(a.id,b.id,winner,a.elo,b.elo,result.changeA,result.changeB,Date.parse(r.roll_date+'T12:00:00Z'),Date.now());
+          db.prepare(`INSERT INTO matches (fighter_a_id,fighter_b_id,status,winner,pre_elo_a,pre_elo_b,elo_change_a,elo_change_b,created_at,resolved_at,recap_id) VALUES (?,?,'resolved',?,?,?,?,?,?,?,?)`).run(a.id,b.id,winner,a.elo,b.elo,result.changeA,result.changeB,Date.parse(r.roll_date+'T12:00:00Z'),Date.now(),r.id);
           changeA += result.changeA; changeB += result.changeB;
         }
       }

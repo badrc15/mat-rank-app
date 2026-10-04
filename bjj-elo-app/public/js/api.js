@@ -30,6 +30,16 @@ window.App = window.App || {};
   }
 
   App.api = {
+    plusStatus: () => request('GET','/api/plus/status'),
+    plus: month => request('GET','/api/plus?month='+encodeURIComponent(month)),
+    checkout: (plan,termsVersion) => request('POST','/api/billing/checkout',{plan,termsVersion,acceptTerms:true,startNow:true}),
+    billingPortal: () => request('POST','/api/billing/portal',{}),
+    journal: () => request('GET','/api/me/journal'),
+    saveJournal: data => request('POST','/api/plus/journal',data),
+    deleteJournal: id => request('DELETE','/api/plus/journal/'+id,{}),
+    saveGoal: data => request('POST','/api/plus/goals',data),
+    deleteGoal: id => request('DELETE','/api/plus/goals/'+id,{}),
+    saveStyle: data => request('POST','/api/plus/style',data),
     register: (username, password, consent) => request("POST", "/api/register", { username, password, ...consent }),
     login: (email, password) => request("POST", "/api/login", { email, password }),
     forgotPassword: email => request("POST", "/api/forgot-password", {email}),

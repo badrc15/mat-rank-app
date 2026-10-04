@@ -93,7 +93,7 @@ App.views.profile = {
     main.innerHTML = `
       ${ui.promotionNote ? `<div class="promo-banner">Promoted to ${App.beltMeta(ui.promotionNote.toBelt).label} belt — Elo reset from ${ui.promotionNote.fromElo} to ${ui.promotionNote.toElo}, the starting point for that belt.</div>` : ""}
 
-      <div class="rating-card">
+      <div class="rating-card profile-banner-${App.escapeHtml(me.style?.banner || 'classic')}">
         <div class="rating-top">
           <div>
             <div class="rating-num display" id="eloCount">${me.elo}</div>

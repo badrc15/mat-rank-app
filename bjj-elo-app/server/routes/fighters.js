@@ -68,6 +68,7 @@ module.exports = function fightersRoutes(router) {
     const fighter = db.prepare("SELECT * FROM fighters WHERE id = ?").get(fighterId);
 
     const today = new Date().toISOString().slice(0, 10);
+    db.prepare('INSERT OR IGNORE INTO training_days VALUES (?,?)').run(fighterId,today);
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 
     if (fighter.streak_last_log === today) {

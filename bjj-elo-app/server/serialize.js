@@ -9,6 +9,7 @@ function publicFighter(row) {
     weight: row.weight,
     gender: row.gender,
     gym: row.gym,
+    style: require('./plus').publicStyle(row.id),
     matchesPlayed: row.matches_played,
     streak: {
       current: row.streak_current,

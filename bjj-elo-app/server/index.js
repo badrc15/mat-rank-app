@@ -18,6 +18,7 @@ require("./routes/auth")(router);
 require("./routes/fighters")(router);
 require("./routes/recaps")(router);
 require("./routes/matches")(router);
+require("./routes/plus")(router);
 
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
 const MIME = {
@@ -60,6 +61,8 @@ function serveStatic(req, res) {
 }
 
 const server = http.createServer(async (req, res) => {
+  // Stripe signs the raw bytes; this one endpoint does not use browser CSRF headers.
+  if (req.method === 'POST' && req.url === '/api/billing/webhook') return require('./billing').webhook(req,res);
   if (security(req, res)) return;
   if (req.url === "/health") { res.writeHead(200); return res.end("ok"); }
   if (req.url.startsWith("/api/")) {

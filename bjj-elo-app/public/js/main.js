@@ -51,6 +51,11 @@ async function loadCommon() {
 
 App.loadTabData = async function (tab) {
   await loadCommon();
+  if (tab === 'plus') {
+    App.state.plusStatus = await App.api.plusStatus();
+    App.state.plusData = App.state.plusStatus.plus ? await App.api.plus(App.state.ui.plusMonth || new Date().toISOString().slice(0,7)) : null;
+    App.state.savedJournal = App.state.plusStatus.plus ? [] : (await App.api.journal()).entries;
+  }
   if (tab === "matches" || tab === "profile") {
     App.state.matchesData = await App.api.getMatches();
   }
@@ -81,6 +86,11 @@ App.logout = async function () {
   App.state.recapsData = null;
   App.state.matchesData = null;
   App.state.feedData = null;
+  App.state.plusData = null;
+  App.state.plusStatus = null;
+  App.state.savedJournal = null;
+  App.state.ui.plusMessage = null;
+  document.body.dataset.theme = '';
   App.state.activeTab = "profile";
   App.state.ui.rollDraft = null;
     App.state.ui.recapEdit = null;
@@ -92,12 +102,14 @@ App.logout = async function () {
 
 App.render = function () {
   const root = document.getElementById("app");
+  root.classList.toggle('plus-shell',Boolean(App.state.me) && App.state.activeTab === 'plus');
   if (!App.state.me) {
     App.views.auth.render(root);
     return;
   }
 
   const me = App.state.me;
+  document.body.dataset.theme = me.style?.theme || '';
   const incomingCount = (App.state.recapsData?.recaps || []).filter(r => r.needsReview).length;
   const activeTab = App.state.activeTab;
 
@@ -106,6 +118,7 @@ App.render = function () {
       <div class="top-row">
         <div class="who">Logged in as <b>${me.username}</b></div>
         <button class="switch-btn" id="accountBtn">Account & privacy</button>
+        <button class="switch-btn" id="plusBtn">Mat Rank Plus</button>
         <button class="switch-btn" id="logoutBtn">Log out</button>
       </div>
     </header>
@@ -121,6 +134,7 @@ App.render = function () {
 
   document.getElementById("logoutBtn").onclick = () => App.logout();
   document.getElementById("accountBtn").onclick = () => App.setTab("account");
+  document.getElementById('plusBtn').onclick = () => App.setTab('plus');
   root.querySelectorAll("nav.tabs button").forEach((b) => {
     b.onclick = () => App.setTab(b.dataset.tab);
   });
@@ -132,6 +146,11 @@ App.render = function () {
 async function boot() {
   try { App.config = await App.api.config(); } catch {}
   const link = new URLSearchParams(location.hash.slice(1));
+  if (link.has('plus')) {
+    App.state.activeTab = 'plus';
+    App.state.ui.plusMessage = link.get('plus') === 'success' ? 'Checkout returned. Access appears once Stripe confirms payment. Use Refresh status if it is still pending.' : link.get('plus') === 'cancelled' ? 'Checkout closed. You can choose a plan whenever you are ready.' : '';
+    history.replaceState(null,'',location.pathname);
+  }
   const kind = link.has('reset') ? 'reset' : link.has('verify') ? 'verify' : null;
   if (kind) {
     App.state.ui.authMode = kind;
@@ -154,7 +173,7 @@ async function boot() {
   // disrupting anything the person is mid-typing or mid-picking.
   setInterval(async () => {
     if (!App.state.me) return;
-    if (["account", "requests", "matches"].includes(App.state.activeTab) || document.hidden) return;
+    if (["account", "requests", "matches", "plus"].includes(App.state.activeTab) || document.hidden) return;
     const active = document.activeElement;
     const isTyping = active && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName);
     if (isTyping || App.state.ui.methodPromptFor) return;

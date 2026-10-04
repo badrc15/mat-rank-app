@@ -68,6 +68,11 @@ module.exports = function authRoutes(router) {
     res.setHeader('Content-Disposition', 'attachment; filename="mat-rank-account.json"');
     sendJson(res, 200, {
       exportedAt: new Date().toISOString(), profile,
+      journal: db.prepare('SELECT * FROM journal_entries WHERE fighter_id=?').all(id),
+      goals: db.prepare('SELECT * FROM training_goals WHERE fighter_id=?').all(id),
+      trainingDays: db.prepare('SELECT day FROM training_days WHERE fighter_id=?').all(id),
+      style: db.prepare('SELECT * FROM profile_styles WHERE fighter_id=?').get(id),
+      subscription: require('../billing').status(id),
       requests: db.prepare('SELECT * FROM requests WHERE from_id = ? OR to_id = ?').all(id, id),
       matches: db.prepare('SELECT * FROM matches WHERE fighter_a_id = ? OR fighter_b_id = ?').all(id, id),
       comments: db.prepare('SELECT * FROM comments WHERE fighter_id = ?').all(id),
@@ -82,6 +87,10 @@ module.exports = function authRoutes(router) {
     const fighter = db.prepare('SELECT * FROM fighters WHERE id = ?').get(id);
     if (body.confirm !== 'DELETE' || !fighter || !(await verifyPassword(body.password, fighter.password_hash, fighter.salt))) return sendJson(res, 400, { error: 'Enter your current password and type DELETE.' });
     if (!requireAuth(req)) return sendJson(res, 401, { error: 'Sign in again.' });
+    if (db.prepare('SELECT 1 FROM billing_customers WHERE fighter_id=?').get(id)) {
+      try { const billing=require('../billing'); await billing.createBilling(billing.stripe()).cancelForDeletion(id); }
+      catch { return sendJson(res,503,{error:'We could not stop billing. Please try again or contact support before deleting your account.'}); }
+    }
     db.exec('BEGIN IMMEDIATE');
     try {
       // Keep non-identifying match records for opponents, but remove profile and authored content.
@@ -95,6 +104,9 @@ module.exports = function authRoutes(router) {
       db.prepare('DELETE FROM password_resets WHERE fighter_id = ?').run(id);
       db.prepare('DELETE FROM email_verifications WHERE fighter_id = ? OR email = ?').run(id, fighter.email);
       db.prepare('DELETE FROM fighters WHERE id = ?').run(id);
+      for (const table of ['journal_entries','training_goals','training_days','profile_styles']) db.prepare(`DELETE FROM ${table} WHERE fighter_id=?`).run(id);
+      db.prepare('DELETE FROM billing_subscriptions WHERE customer_id IN (SELECT customer_id FROM billing_customers WHERE fighter_id=?)').run(id);
+      db.prepare('DELETE FROM billing_customers WHERE fighter_id=?').run(id);
       db.exec('COMMIT');
     } catch (err) { db.exec('ROLLBACK'); throw err; }
     setSessionCookie(res, ''); sendJson(res, 200, { ok: true });

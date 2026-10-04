@@ -12,5 +12,8 @@
     "node": ">=22.20.0"
   },
   "license": "UNLICENSED",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "stripe": "23.0.0"
+  }
 }
