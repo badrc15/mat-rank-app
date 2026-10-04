@@ -1,6 +1,6 @@
 # Free hosting preparation — 3 October 2026
 
-Status: not deployed. No paid plan or service has been provisioned.
+Status: Railway Free, Railway hosting and Resend Free/email have been provisioned. No paid plan was selected. The app is not live: the public URL returns 404 pending Railway CLI sign-in, build-root configuration and a persistent volume.
 
 ## Candidate: Railway Free
 
@@ -25,12 +25,14 @@ After authentication and confirmation that a Free plan is actually available to 
 7. Deploy, verify HTTPS and cookie flags, account persistence after a restart, and the mounted volume. Update the preview policies to the verified hosting processor and region; the current documents still describe the earlier Fly plan.
 8. Keep production registration closed until the existing children's privacy and safety launch gaps are resolved.
 
-## Authentication blocker
+## Current deployment state — 4 October 2026
 
-Stripe CLI 1.53.0, Directory 0.3.5 and Projects 0.46.0 are available. Catalog discovery worked, but provisioning preflight returned `BROWSER_AUTH_REQUIRED`; it could not check account eligibility. No project was initialized. The Projects skill requires stopping for user-completed browser authentication rather than retrying initialization.
+- GitHub repository: badrc15/mat-rank-app, branch codex/production-accounts.
+- Railway project: e37af765-6fab-436e-b4a9-b22255d2ac72.
+- Public address reserved: https://mat-rank-app-production-56cf.up.railway.app (not serving the app yet).
+- Stripe Projects is authenticated. Direct Railway CLI access still requires the user to complete Railway sign-in.
+- The first hosting request failed because the branch had not yet been pushed; that errored record was untracked. A replacement hosting request completed successfully after publishing the branch.
+- Resend Free and an email API resource are provisioned. The operator has no domain; delivery to users is blocked until a sender domain is verified. Do not enable EMAIL_DOMAIN_VERIFIED or SIGNUPS_ENABLED before the necessary checks.
+- The release is now adults-only. Public account signup remains disabled.
 
-The CLI's message/remedy, verbatim:
-
-> Run `stripe login --non-interactive --new-session` to print JSON with `browser_url`, `verification_code`, and `next_step`; present `browser_url` and `verification_code` to the user, then run the emitted `next_step` command to complete login before retrying. `--new-session` is required: without it the Stripe CLI prints "already logged in" and exits 0 without authenticating, and that exit 0 is not success. If the CLI rejects `--new-session` as an unknown flag (Stripe CLI older than 1.50.0), run the same command without that flag — on those versions it prints the same JSON handoff when no session exists. If any login attempt prints "already logged in" instead of JSON, stop and tell the user to run `stripe projects init` themselves in a terminal with browser access — a session already exists, so `stripe login` prints the same "already logged in" for them and cannot authenticate Projects either. Never retry the original command until a login has actually completed. Try the login once only: if the same check still fails after a login that completed successfully, another sign-in will not change it — stop and tell the user to run `stripe projects init` themselves in a terminal with browser access.
-
-On this machine the CLI is invoked through `npx --yes @stripe/cli@latest` rather than a global `stripe` executable. The user can run interactive `npx --yes @stripe/cli@latest projects init` from this app folder to complete the browser sign-in and setup themselves. Do not select or accept a paid service.
+No local demo database or credentials were pushed to GitHub. Production on Railway refuses to start without a persistent volume mounted at DATA_DIR.

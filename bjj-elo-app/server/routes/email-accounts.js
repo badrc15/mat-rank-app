@@ -29,6 +29,7 @@ module.exports = function(router) {
     if (body.acceptTerms !== true || body.termsVersion !== VERSION || body.privacyVersion !== VERSION) return sendJson(res,400,{error:'Please read the current terms and privacy notice and accept the terms.'});
     if (username.length<2 || username.includes('@')) return sendJson(res,400,{error:'Choose a nickname of 2–30 characters, not an email address.'});
     const error=passwordError(body.password); if(error) return sendJson(res,400,{error});
+    if (rateLimit(req,res,'register-email',3,3600000,email)) return;
     const {hash,salt}=await hashPassword(body.password);
     if (!db.prepare('SELECT id FROM fighters WHERE email = ? COLLATE NOCASE OR username = ? COLLATE NOCASE').get(email,username)) {
       const token=crypto.randomBytes(32).toString('hex');
