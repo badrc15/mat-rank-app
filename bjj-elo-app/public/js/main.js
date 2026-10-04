@@ -91,6 +91,8 @@ App.logout = async function () {
   App.state.savedJournal = null;
   App.state.ui.plusMessage = null;
   document.body.dataset.theme = '';
+  document.body.dataset.background = '';
+  document.querySelector('#fighterDialog')?.remove();
   App.state.activeTab = "profile";
   App.state.ui.rollDraft = null;
     App.state.ui.recapEdit = null;
@@ -110,6 +112,7 @@ App.render = function () {
 
   const me = App.state.me;
   document.body.dataset.theme = me.style?.theme || '';
+  document.body.dataset.background = me.style?.background || 'classic';
   const incomingCount = (App.state.recapsData?.recaps || []).filter(r => r.needsReview).length;
   const activeTab = App.state.activeTab;
 
@@ -141,6 +144,7 @@ App.render = function () {
 
   const main = document.getElementById("main");
   App.views[activeTab].render(main);
+  App.wireProfiles(main);
 };
 
 async function boot() {
@@ -173,6 +177,7 @@ async function boot() {
   // disrupting anything the person is mid-typing or mid-picking.
   setInterval(async () => {
     if (!App.state.me) return;
+    if (document.querySelector("#fighterDialog[open]") || App.state.ui.photoBusy) return;
     if (["account", "requests", "matches", "plus"].includes(App.state.activeTab) || document.hidden) return;
     const active = document.activeElement;
     const isTyping = active && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName);

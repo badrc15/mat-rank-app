@@ -72,6 +72,7 @@ module.exports = function authRoutes(router) {
       goals: db.prepare('SELECT * FROM training_goals WHERE fighter_id=?').all(id),
       trainingDays: db.prepare('SELECT day FROM training_days WHERE fighter_id=?').all(id),
       style: db.prepare('SELECT * FROM profile_styles WHERE fighter_id=?').get(id),
+      photo: (()=>{const p=db.prepare('SELECT image FROM profile_photos WHERE fighter_id=?').get(id);return p ? 'data:image/webp;base64,'+Buffer.from(p.image).toString('base64') : null;})(),
       subscription: require('../billing').status(id),
       requests: db.prepare('SELECT * FROM requests WHERE from_id = ? OR to_id = ?').all(id, id),
       matches: db.prepare('SELECT * FROM matches WHERE fighter_a_id = ? OR fighter_b_id = ?').all(id, id),
@@ -104,7 +105,7 @@ module.exports = function authRoutes(router) {
       db.prepare('DELETE FROM password_resets WHERE fighter_id = ?').run(id);
       db.prepare('DELETE FROM email_verifications WHERE fighter_id = ? OR email = ?').run(id, fighter.email);
       db.prepare('DELETE FROM fighters WHERE id = ?').run(id);
-      for (const table of ['journal_entries','training_goals','training_days','profile_styles','billing_checkout_attempts']) db.prepare(`DELETE FROM ${table} WHERE fighter_id=?`).run(id);
+      for (const table of ['journal_entries','training_goals','training_days','profile_styles','profile_photos','billing_checkout_attempts']) db.prepare(`DELETE FROM ${table} WHERE fighter_id=?`).run(id);
       db.prepare('DELETE FROM billing_subscriptions WHERE customer_id IN (SELECT customer_id FROM billing_customers WHERE fighter_id=?)').run(id);
       db.prepare('DELETE FROM billing_customers WHERE fighter_id=?').run(id);
       db.exec('COMMIT');

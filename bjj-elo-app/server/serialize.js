@@ -10,6 +10,7 @@ function publicFighter(row) {
     gender: row.gender,
     gym: row.gym,
     style: require('./plus').publicStyle(row.id),
+    avatarUrl: (()=>{const p=require('./db').prepare('SELECT version FROM profile_photos WHERE fighter_id=?').get(row.id);return p ? '/api/fighters/'+row.id+'/avatar?v='+p.version : null;})(),
     matchesPlayed: row.matches_played,
     streak: {
       current: row.streak_current,

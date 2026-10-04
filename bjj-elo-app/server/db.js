@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS billing_subscriptions (id TEXT PRIMARY KEY, customer_
 CREATE INDEX IF NOT EXISTS billing_subscription_customer ON billing_subscriptions(customer_id);
 CREATE TABLE IF NOT EXISTS billing_events (id TEXT PRIMARY KEY, processed_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS billing_checkout_attempts (fighter_id INTEGER PRIMARY KEY, plan TEXT NOT NULL, attempt_key TEXT NOT NULL, payload TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS profile_photos (fighter_id INTEGER PRIMARY KEY, image BLOB NOT NULL, version TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS training_days (fighter_id INTEGER NOT NULL, day TEXT NOT NULL, PRIMARY KEY(fighter_id, day));
 CREATE TABLE IF NOT EXISTS journal_entries (id INTEGER PRIMARY KEY AUTOINCREMENT, fighter_id INTEGER NOT NULL, day TEXT NOT NULL, technique TEXT NOT NULL, notes TEXT NOT NULL, next_focus TEXT NOT NULL, updated_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS journal_owner ON journal_entries(fighter_id, day);
@@ -135,3 +136,5 @@ if (!db.prepare("SELECT 1 FROM recap_migrations WHERE name = 'after-training-v1'
     db.exec("COMMIT");
   } catch (err) { db.exec("ROLLBACK"); throw err; }
 }
+
+for (const col of ['background','feed']) { if (!db.prepare('PRAGMA table_info(profile_styles)').all().some(c=>c.name===col)) db.exec(`ALTER TABLE profile_styles ADD COLUMN ${col} TEXT NOT NULL DEFAULT 'classic'`); }

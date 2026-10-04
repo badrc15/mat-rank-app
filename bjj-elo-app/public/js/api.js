@@ -30,6 +30,8 @@ window.App = window.App || {};
   }
 
   App.api = {
+    uploadAvatar: image => request('POST','/api/me/avatar',{image}),
+    removeAvatar: () => request('DELETE','/api/me/avatar',{}),
     plusStatus: () => request('GET','/api/plus/status'),
     plus: month => request('GET','/api/plus?month='+encodeURIComponent(month)),
     checkout: (plan,termsVersion) => request('POST','/api/billing/checkout',{plan,termsVersion,acceptTerms:true,startNow:true}),

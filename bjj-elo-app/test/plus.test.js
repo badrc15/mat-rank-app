@@ -28,6 +28,20 @@ test('Plus privacy, persistence, analytics and payment access',async t=>{
   await assert.rejects(service.processEvent({...event('evt_live'),livemode:true}));
   current.latest_invoice={status:'open'};current.items.data[0].current_period_end=until+3600;await service.processEvent(event('evt_failed'));assert.equal(billing.status(ids[0]).paidUntil,until*1000);
  });
+ await t.test('photos validate, stay authenticated, export and persist',async()=>{
+  const sharp=require('sharp');const png=await sharp({create:{width:800,height:600,channels:3,background:'#267a82'}}).png().toBuffer();const image='data:image/png;base64,'+png.toString('base64');
+  assert.equal((await req('/api/me/avatar',null,{image})).status,401);
+  assert.equal((await req('/api/me/avatar',1,{image:'data:image/svg+xml;base64,PHN2Zy8+'})).status,400);
+  assert.equal((await req('/api/me/avatar',1,{image:'data:image/png;base64,ZmFrZQ=='})).status,400);
+  assert.equal((await req('/api/me/avatar',1,{image})).status,200);
+  const f=(await req('/api/me',1)).data.fighter;assert.ok(f.avatarUrl);assert.equal((await req('/api/me')).data.fighter.avatarUrl,null);
+  let r=await fetch('http://127.0.0.1:'+port+f.avatarUrl);assert.equal(r.status,401);
+  r=await fetch('http://127.0.0.1:'+port+f.avatarUrl,{headers:{Cookie:cookies[0]}});assert.equal(r.status,200);assert.equal(r.headers.get('content-type'),'image/webp');
+  const meta=await sharp(Buffer.from(await r.arrayBuffer())).metadata();assert.equal(meta.width,512);assert.equal(meta.height,512);assert.equal(meta.exif,undefined);
+  assert.match((await req('/api/me/export',1)).data.photo,/^data:image\/webp;base64,/);
+  await stop();await start();assert.equal((await req('/api/me',1)).data.fighter.avatarUrl,f.avatarUrl);
+  assert.equal((await req('/api/me/avatar',1,{},'DELETE')).status,200);assert.equal((await req('/api/me',1)).data.fighter.avatarUrl,null);
+ });
  const day=new Date().toISOString().slice(0,10),month=day.slice(0,7);let noteId;
  await t.test('journal is private, validates dates, permits edits, and exports',async()=>{
   assert.equal((await req('/api/plus/journal',0,{day:'2026-02-31',technique:'Guard',notes:'Private',nextFocus:''})).status,400);
@@ -49,8 +63,8 @@ test('Plus privacy, persistence, analytics and payment access',async t=>{
  await t.test('goals and styles validate and persist across restart',async()=>{
   assert.equal((await req('/api/plus/goals',0,{title:'Train consistently',target:8,month})).status,200);
   assert.equal((await req('/api/plus/style',0,{theme:'red;url(evil)',banner:'classic'})).status,400);
-  assert.equal((await req('/api/plus/style',0,{theme:'ocean',banner:'summit'})).status,200);
-  await stop();await start();const data=(await req('/api/plus')).data;assert.equal(data.journals.length,1);assert.equal(data.goals.length,1);assert.equal(data.style.theme,'ocean');
+  assert.equal((await req('/api/plus/style',0,{theme:'ocean',banner:'aurora',background:'tatami',feed:'spotlight'})).status,200);
+  await stop();await start();const data=(await req('/api/plus')).data;assert.equal(data.journals.length,1);assert.equal(data.goals.length,1);assert.equal(data.style.theme,'ocean');assert.equal(data.style.background,'tatami');assert.equal(data.style.feed,'spotlight');
  });
  await t.test('cancellation revokes Plus and replayed older events cannot restore it',async()=>{
   current.status='canceled';await service.processEvent(event('evt_cancel'));assert.equal(billing.status(ids[0]).plus,false);

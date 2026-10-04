@@ -9,7 +9,7 @@ function fighterRow(f, blocked, me, pendingToIds, rankLabel) {
   const bm = App.beltMeta(f.belt);
   return `<div class="row">
     <div>
-      <div class="fighter-name">${rankLabel !== undefined ? `<span class="rank-num">${rankLabel}</span>` : ""}<span class="belt-swatch" style="background:${bm.color}"></span>${f.username}${isMe ? " (you)" : ""}</div>
+      <div class="fighter-name">${App.avatar(f)}${rankLabel !== undefined ? `<span class="rank-num">${rankLabel}</span>` : ""}<span class="belt-swatch" style="background:${bm.color}"></span><button class="profile-link" data-profile="${f.id}">${f.username}${isMe ? " (you)" : ""}</button></div>
       <div class="fighter-meta">${f.gym ? f.gym + " · " : ""}${bm.label} belt${f.weight ? " · " + f.weight + "kg" : ""}${f.gender ? " · " + (f.gender === "women" ? "Women" : "Men") : ""}</div>
     </div>
     <div style="display:flex;align-items:center;gap:12px;">
@@ -38,7 +38,7 @@ App.views.roster = {
     const blocked = false;
     const pendingToIds = new Set();
 
-    if (all.length <= 1) {
+    if (all.length === 0) {
       main.innerHTML = App.emptyState("No other fighters yet. Invite training partners to create accounts and they'll show up here.");
       return;
     }

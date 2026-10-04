@@ -8,10 +8,11 @@ function feedFighterChip(f, isWinner) {
   if (f.weight) parts.push(f.weight + "kg");
   if (division) parts.push(division);
   if (f.gym) parts.push(f.gym);
-  return `<div class="feed-fighter">
+  return `<div class="feed-fighter feed-style-${App.escapeHtml(f.style?.feed||'classic')}">
+    ${App.avatar(f)}
     <span class="belt-swatch" style="background:${bm.color}"></span>
     <div class="feed-fighter-text">
-      <div class="feed-fighter-name ${isWinner ? "feed-fighter-name-winner" : ""}">${f.username}</div>
+      <div class="feed-fighter-name ${isWinner ? "feed-fighter-name-winner" : ""}"><button class="profile-link" data-profile="${f.id}">${f.username}</button>${f.style ? '<span class="plus-mark">PLUS</span>' : ''}</div>
       <div class="feed-fighter-meta">${parts.join(" · ")}</div>
     </div>
   </div>`;

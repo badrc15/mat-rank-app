@@ -61,7 +61,8 @@ function parseBody(req) {
     let oversized = false;
     req.on("data", (chunk) => {
       bytes += chunk.length;
-      if (bytes > 16384) { oversized = true; reject(Object.assign(new Error("Request too large"), { status: 413 })); return; }
+      const limit = req.url.split('?')[0] === '/api/me/avatar' ? 2900000 : 16384;
+      if (bytes > limit) { oversized = true; reject(Object.assign(new Error("Request too large"), { status: 413 })); return; }
       data += chunk;
     });
     req.on("end", () => {

@@ -19,6 +19,7 @@ require("./routes/fighters")(router);
 require("./routes/recaps")(router);
 require("./routes/matches")(router);
 require("./routes/plus")(router);
+require("./routes/appearance")(router);
 
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
 const MIME = {

@@ -91,6 +91,7 @@ App.views.profile = {
     const bm = App.beltMeta(me.belt);
 
     main.innerHTML = `
+      <section class="photo-editor">${App.avatar(me,'large')}<div><h2>${me.username}</h2><label class="btn btn-ghost">Change photo<input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp"></label><button class="btn btn-ghost" id="removePhoto" ${me.avatarUrl?'':'disabled'}>Remove photo</button><p>JPEG, PNG or WebP · up to 2 MB. Cropped to a square. Visible to signed-in members.</p><p id="photoStatus" role="status"></p></div></section>
       ${ui.promotionNote ? `<div class="promo-banner">Promoted to ${App.beltMeta(ui.promotionNote.toBelt).label} belt — Elo reset from ${ui.promotionNote.fromElo} to ${ui.promotionNote.toElo}, the starting point for that belt.</div>` : ""}
 
       <div class="rating-card profile-banner-${App.escapeHtml(me.style?.banner || 'classic')}">
@@ -173,6 +174,7 @@ App.views.profile = {
       </div>
     `;
 
+    App.wirePhotoEditor(main);
     document.getElementById("beltSel").onchange = async (e) => {
       const newBelt = e.target.value;
       const oldElo = me.elo;
