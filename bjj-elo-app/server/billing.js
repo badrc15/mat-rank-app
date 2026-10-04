@@ -49,6 +49,7 @@ function createBilling(api) {
       const fighter = db.prepare('SELECT * FROM fighters WHERE id=?').get(id);
       if (!fighter?.email_verified_at) throw Object.assign(new Error('Verify your account email before subscribing.'), { status: 409 });
       let mapping = db.prepare('SELECT * FROM billing_customers WHERE fighter_id=?').get(id);
+      if (mapping?.deleting) throw Object.assign(new Error('Account deletion is pending. Contact support or finish deleting your account.'),{status:409});
       if (!mapping) {
         const customer = await api.customers.create({ email: fighter.email }, { idempotencyKey: 'matrank-customer-'+id+'-'+fighter.created_at });
         db.prepare('INSERT INTO billing_customers(fighter_id,customer_id) VALUES (?,?)').run(id,customer.id);
@@ -66,8 +67,18 @@ function createBilling(api) {
       const price = await api.prices.retrieve(prices()[plan]);
       if (!price.active || price.currency !== 'gbp' || price.unit_amount !== (plan === 'monthly' ? 299 : 2400) || price.recurring?.interval !== (plan === 'monthly' ? 'month' : 'year') || price.recurring?.interval_count !== 1) throw new Error('Configured price does not match advertised plan');
       const origin = process.env.APP_ORIGIN;
-      const session = await api.checkout.sessions.create({ mode: 'subscription', customer: mapping.customer_id, line_items: [{ price: price.id, quantity: 1 }], success_url: origin+'/#plus=success', cancel_url: origin+'/#plus=cancelled', expires_at: Math.floor(Date.now()/1000)+1800, consent_collection: { terms_of_service: 'required' }, custom_text: { terms_of_service_acceptance: { message: `I agree to the [Mat Rank Plus terms](${origin}/plus-terms.html).` } }, integration_identifier: 'matrank_plus_'+Array.from(randomBytes(8), b => String.fromCharCode(97+b%26)).join('') }, { idempotencyKey: 'matrank-checkout-'+id+'-'+plan+'-'+Math.floor(Date.now()/1800000) });
+      // Keep the exact parameters across retries, including after a process restart.
+      let attempt = db.prepare('SELECT * FROM billing_checkout_attempts WHERE fighter_id=?').get(id);
+      if (attempt && attempt.plan !== plan) throw Object.assign(new Error('Retry your previous plan first to resolve the pending checkout.'), {status:409});
+      if (!attempt) {
+        const payload = { mode: 'subscription', managed_payments: {enabled:false}, customer: mapping.customer_id, line_items: [{ price: price.id, quantity: 1 }], success_url: origin+'/#plus=success', cancel_url: origin+'/#plus=cancelled', expires_at: Math.floor(Date.now()/1000)+1800, consent_collection: { terms_of_service: 'required' }, custom_text: { terms_of_service_acceptance: { message: `I agree to the [Mat Rank Plus terms](${origin}/plus-terms.html).` } }, integration_identifier: 'matrank_plus_'+Array.from(randomBytes(8), b => String.fromCharCode(97+b%26)).join('') };
+        db.prepare('INSERT INTO billing_checkout_attempts VALUES(?,?,?,?)').run(id,plan,randomBytes(24).toString('hex'),JSON.stringify(payload));
+        attempt=db.prepare('SELECT * FROM billing_checkout_attempts WHERE fighter_id=?').get(id);
+      }
+      const session = await api.checkout.sessions.create(JSON.parse(attempt.payload), {idempotencyKey:attempt.attempt_key});
       db.prepare('UPDATE billing_customers SET checkout_id=?,checkout_plan=?,accepted_at=?,terms_version=? WHERE fighter_id=?').run(session.id,plan,Date.now(),VERSION,id);
+      db.prepare('DELETE FROM billing_checkout_attempts WHERE fighter_id=?').run(id);
+      if (!session.url) throw Object.assign(new Error('The previous checkout has closed. Please try again.'),{status:409});
       return session.url;
     });
   }
@@ -94,6 +105,13 @@ function createBilling(api) {
     return exclusive('account:'+id, async () => {
       const row = db.prepare('SELECT * FROM billing_customers WHERE fighter_id=?').get(id);
       if (!row) return;
+      db.prepare('UPDATE billing_customers SET deleting=1 WHERE fighter_id=?').run(id);
+      const attempt=db.prepare('SELECT * FROM billing_checkout_attempts WHERE fighter_id=?').get(id);
+      if(attempt){
+        const recovered=await api.checkout.sessions.create(JSON.parse(attempt.payload),{idempotencyKey:attempt.attempt_key});
+        if(recovered.status==='open')await api.checkout.sessions.expire(recovered.id);
+        db.prepare('DELETE FROM billing_checkout_attempts WHERE fighter_id=?').run(id);
+      }
       if (row.checkout_id) {
         const session = await api.checkout.sessions.retrieve(row.checkout_id);
         if (session.status === 'open') await api.checkout.sessions.expire(session.id);

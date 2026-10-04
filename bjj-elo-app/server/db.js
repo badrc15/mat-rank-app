@@ -18,12 +18,14 @@ CREATE TABLE IF NOT EXISTS billing_customers (fighter_id INTEGER PRIMARY KEY, cu
 CREATE TABLE IF NOT EXISTS billing_subscriptions (id TEXT PRIMARY KEY, customer_id TEXT NOT NULL, status TEXT NOT NULL, paid_until INTEGER NOT NULL DEFAULT 0, cancel_at_period_end INTEGER NOT NULL DEFAULT 0, price_id TEXT, updated_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS billing_subscription_customer ON billing_subscriptions(customer_id);
 CREATE TABLE IF NOT EXISTS billing_events (id TEXT PRIMARY KEY, processed_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS billing_checkout_attempts (fighter_id INTEGER PRIMARY KEY, plan TEXT NOT NULL, attempt_key TEXT NOT NULL, payload TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS training_days (fighter_id INTEGER NOT NULL, day TEXT NOT NULL, PRIMARY KEY(fighter_id, day));
 CREATE TABLE IF NOT EXISTS journal_entries (id INTEGER PRIMARY KEY AUTOINCREMENT, fighter_id INTEGER NOT NULL, day TEXT NOT NULL, technique TEXT NOT NULL, notes TEXT NOT NULL, next_focus TEXT NOT NULL, updated_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS journal_owner ON journal_entries(fighter_id, day);
 CREATE TABLE IF NOT EXISTS training_goals (id INTEGER PRIMARY KEY AUTOINCREMENT, fighter_id INTEGER NOT NULL, title TEXT NOT NULL, target INTEGER NOT NULL, month TEXT NOT NULL, completed INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS profile_styles (fighter_id INTEGER PRIMARY KEY, theme TEXT NOT NULL DEFAULT 'gold', banner TEXT NOT NULL DEFAULT 'classic');
 `);
+if (!db.prepare('PRAGMA table_info(billing_customers)').all().some(c=>c.name==='deleting')) db.exec('ALTER TABLE billing_customers ADD COLUMN deleting INTEGER NOT NULL DEFAULT 0');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS fighters (

@@ -104,7 +104,7 @@ module.exports = function authRoutes(router) {
       db.prepare('DELETE FROM password_resets WHERE fighter_id = ?').run(id);
       db.prepare('DELETE FROM email_verifications WHERE fighter_id = ? OR email = ?').run(id, fighter.email);
       db.prepare('DELETE FROM fighters WHERE id = ?').run(id);
-      for (const table of ['journal_entries','training_goals','training_days','profile_styles']) db.prepare(`DELETE FROM ${table} WHERE fighter_id=?`).run(id);
+      for (const table of ['journal_entries','training_goals','training_days','profile_styles','billing_checkout_attempts']) db.prepare(`DELETE FROM ${table} WHERE fighter_id=?`).run(id);
       db.prepare('DELETE FROM billing_subscriptions WHERE customer_id IN (SELECT customer_id FROM billing_customers WHERE fighter_id=?)').run(id);
       db.prepare('DELETE FROM billing_customers WHERE fighter_id=?').run(id);
       db.exec('COMMIT');
