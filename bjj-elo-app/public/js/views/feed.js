@@ -30,7 +30,7 @@ function renderCommentNode(matchId, c, all, isReply) {
   const replies = all.filter((r) => r.parentId === c.id);
   const showReplyBox = ui.replyingTo === c.id;
   return `<div class="feed-comment ${isReply ? "feed-comment-reply" : ""}">
-    <div class="feed-comment-line"><b>${name}</b> ${c.text}</div>
+    <div class="feed-comment-line">${c.author?.id ? `<button class="profile-link" data-profile="${c.author.id}">${name}</button>` : `<b>${name}</b>`} ${c.text}</div>
     <div class="feed-comment-meta">
       <span class="feed-comment-time">${App.timeAgo(c.createdAt)}</span>
       <button class="feed-reply-btn" data-reply-to="${c.id}">${showReplyBox ? "Cancel" : "Reply"}</button>
