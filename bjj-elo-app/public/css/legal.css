@@ -31,5 +31,7 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid 
 .cookie-notice p {margin:8px 0;line-height:1.5;}
 .cookie-notice a {color:#e0bd50;}
 .cookie-settings {display:block;margin:16px auto;}
-.auth-link {margin-top:16px;}
+.auth-link {margin-top:16px;background:transparent;border:0;padding:10px;color:#d6b74f;text-decoration:underline;font:inherit;cursor:pointer;}
+.cookie-notice button {padding:10px 20px;border:0;border-radius:8px;background:#6d9569;color:#0e1710;font:inherit;font-weight:600;cursor:pointer;}
+.cookie-notice {max-height:calc(100dvh - 32px);overflow:auto;box-sizing:border-box;}
 .auth-error:empty, .auth-hint:empty {display:none;}
